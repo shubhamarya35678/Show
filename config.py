@@ -22,8 +22,8 @@ class Config:
         self.SESSION2 = getenv("SESSION2", None)
         self.SESSION3 = getenv("SESSION3", None)
 
-        self.SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/+GnzQDHefH9FiNDFl")
-        self.SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/+GnzQDHefH9FiNDFl")
+        self.SUPPORT_CHANNEL = getenv("SUPPORT_CHANNEL", "https://t.me/TgMusicBots")
+        self.SUPPORT_CHAT = getenv("SUPPORT_CHAT", "https://t.me/SunoBot_Updates")
 
         self.AUTO_END: bool = getenv("AUTO_END", False)
         self.AUTO_LEAVE: bool = getenv("AUTO_LEAVE", False)
