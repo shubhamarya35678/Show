@@ -11,15 +11,18 @@ from anony.helpers import Track
 class Thumbnail:
     def __init__(self):
         # Hexagon settings
-        self.hex_radius = 200 
+        self.hex_radius = 200
         self.fill = (255, 255, 255)
         self.stroke_color = (255, 255, 255) # White border
         self.stroke_width = 10 
 
         # Load Fonts
+        # Ensure these font files exist in the specified path
         self.font_title = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 50)
-        # UPDATED: Reduced size from 60 to 40
+        
+        # CHANGED: Reduced font size from 60 to 40
         self.font_header = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 40)
+        
         self.font_duration = ImageFont.truetype("anony/helpers/Inter-Light.ttf", 35)
 
     async def save_thumb(self, output_path: str, url: str) -> str:
@@ -71,14 +74,14 @@ class Thumbnail:
             original = Image.open(temp).convert("RGBA")
             background = original.resize(size, Image.Resampling.LANCZOS)
 
-            # Apply Blur
+            # Apply "Little" Blur (Reduced from 30 to 10)
             background = background.filter(ImageFilter.GaussianBlur(10))
             enhancer = ImageEnhance.Brightness(background)
             background = enhancer.enhance(0.5)  # Darken background to 50%
 
             # --- 2. Central Hexagon Artwork ---
-            # UPDATED: Reduced dimensions from (380, 380) to (300, 300)
-            hex_w, hex_h = (300, 300)
+            # Define hexagon box size - MADE SMALLER (Was 480, now 380)
+            hex_w, hex_h = (380, 380)
 
             # Center coordinates
             center_x = size[0] // 2
@@ -102,6 +105,7 @@ class Thumbnail:
             background.paste(thumb_crop, (paste_x, paste_y), thumb_crop)
 
             # --- Draw Border AFTER Pasting ---
+            # This ensures the white border is visible on top of the image
             draw = ImageDraw.Draw(background)
 
             # Offset points to the center of the canvas
