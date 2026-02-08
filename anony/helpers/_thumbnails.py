@@ -16,15 +16,19 @@ from anony.helpers import Track
 class Thumbnail:
     def __init__(self):
         # Hexagon settings
-        self.hex_radius = 200  # Controls the size of the center image
+        self.hex_radius = 230  # Slightly larger to match the visual weight
         self.fill = (255, 255, 255)
-        
+        self.stroke_color = (255, 255, 255)
+        self.stroke_width = 7
+
         # Load Fonts
-        # font1: Bold/Larger for Title and Main headings
-        # font2: Light/Smaller for metadata
-        self.font_title = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 45)
-        self.font_med = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 35)
-        self.font_small = ImageFont.truetype("anony/helpers/Inter-Light.ttf", 30)
+        # Ensure these font files exist in the specified path
+        # Title font (for Song Name)
+        self.font_title = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 50)
+        # Header font (for STARTED PLAYING)
+        self.font_header = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 60)
+        # Duration font
+        self.font_duration = ImageFont.truetype("anony/helpers/Inter-Light.ttf", 35)
 
     async def save_thumb(self, output_path: str, url: str) -> str:
         async with aiohttp.ClientSession() as session:
@@ -36,12 +40,13 @@ class Thumbnail:
         """Creates a hexagon mask and a border polygon"""
         w, h = size
         cx, cy = w // 2, h // 2
+        # Radius is half the width/height usually
         radius = min(w, h) // 2
-        
-        # Calculate 6 points of a regular hexagon (pointy top)
+
+        # Calculate 6 points of a regular hexagon
         points = []
         for i in range(6):
-            # 270 degrees is top (-90 in radians), then add 60 degrees (pi/3) per point
+            # Start at 270 (top) + 60 increments
             angle_deg = 270 + (60 * i)
             angle_rad = math.radians(angle_deg)
             x = cx + radius * math.cos(angle_rad)
@@ -53,6 +58,14 @@ class Thumbnail:
         draw.polygon(points, fill=255)
         return mask, points
 
+    def draw_text_with_shadow(self, draw, xy, text, font, fill="white", shadow="black", offset=(3, 3), anchor="mm", align="center"):
+        """Helper to draw text with a drop shadow for better visibility"""
+        x, y = xy
+        # Draw shadow
+        draw.multiline_text((x + offset[0], y + offset[1]), text, font=font, fill=shadow, anchor=anchor, align=align)
+        # Draw text
+        draw.multiline_text(xy, text, font=font, fill=fill, anchor=anchor, align=align)
+
     async def generate(self, song: Track, size=(1280, 720)) -> str:
         try:
             temp = f"cache/temp_{song.id}.jpg"
@@ -61,68 +74,87 @@ class Thumbnail:
                 return output
 
             await self.save_thumb(temp, song.thumbnail)
-            
+
             # --- 1. Background Setup ---
-            # Load and create the blurred background
             original = Image.open(temp).convert("RGBA")
             background = original.resize(size, Image.Resampling.LANCZOS)
-            background = background.filter(ImageFilter.GaussianBlur(30)) # Increased blur
-            background = ImageEnhance.Brightness(background).enhance(0.40) # Darker background
+            
+            # Apply heavy blur and darken to match the reference style
+            background = background.filter(ImageFilter.GaussianBlur(30))
+            enhancer = ImageEnhance.Brightness(background)
+            background = enhancer.enhance(0.5)  # Darken background to 50%
 
-            # --- 2. Hexagon Image ---
-            # Define hexagon size (square bounding box)
-            hex_size = (420, 420) 
+            # --- 2. Central Hexagon Artwork ---
+            # Define hexagon box size
+            hex_w, hex_h = (480, 480)
             
-            # Resize original image to fill the hexagon box
-            thumb_crop = ImageOps.fit(original, hex_size, method=Image.LANCZOS, centering=(0.5, 0.5))
-            
-            # Create the mask and points
-            mask, hex_points = self.create_hexagon_mask(hex_size)
-            
-            # Draw the WHITE border hexagon on the main background first
-            # We calculate center position for the artwork
+            # Center coordinates
             center_x = size[0] // 2
-            center_y = int(size[1] * 0.38) # Position slightly above center (38% down)
-            
-            bg_draw = ImageDraw.Draw(background)
-            
-            # Calculate border points (offset by placement position)
-            border_points = [(x + center_x - hex_size[0]//2, y + center_y - hex_size[1]//2) for x, y in hex_points]
-            
-            # Draw white hexagon (slightly larger effectively creates the border look if we scale, 
-            # but drawing a thick outline is easier)
-            bg_draw.polygon(border_points, outline=self.fill, width=8)
+            # Shift center_y slightly up to make room for bottom text
+            center_y = int(size[1] * 0.45) 
 
-            # Apply mask to the crop and paste it
-            thumb_crop.putalpha(mask)
-            background.paste(thumb_crop, (center_x - hex_size[0]//2, center_y - hex_size[1]//2), thumb_crop)
+            # Crop original to fill hexagon box
+            thumb_crop = ImageOps.fit(original, (hex_w, hex_h), method=Image.LANCZOS, centering=(0.5, 0.5))
+            
+            # Create mask
+            mask, hex_points = self.create_hexagon_mask((hex_w, hex_h))
 
-            # --- 3. Text Drawing ---
+            # Draw the Hexagon Border on the Background
             draw = ImageDraw.Draw(background)
-
-            # TOP: "STARTED PLAYING"
-            draw.text((center_x, 80), "STARTED PLAYING", font=self.font_med, fill=self.fill, anchor="mm")
-
-            # MIDDLE-BOTTOM: Song Title
-            # Use textwrap to handle long titles so they don't go off screen
-            title_text = song.title
-            wrapper = textwrap.TextWrapper(width=30) # Adjust width based on font size
-            word_list = wrapper.wrap(text=title_text)
-            caption_new = ""
-            for ii in word_list[:-1]:
-                caption_new = caption_new + ii + "\n"
-            caption_new += word_list[-1]
             
-            # Position text below hexagon (approx Y=580)
-            draw.multiline_text((center_x, 580), caption_new, font=self.font_title, fill=self.fill, align="center", anchor="mm")
+            # Offset points to the center of the canvas
+            final_hex_points = [
+                (x + center_x - hex_w//2, y + center_y - hex_h//2) 
+                for x, y in hex_points
+            ]
+            
+            # Draw border (Stroke)
+            draw.polygon(final_hex_points, outline=self.stroke_color, width=self.stroke_width)
 
-            # BOTTOM: Duration
-            # Assuming song.duration is a string like "5:43"
+            # Apply mask to crop and paste
+            thumb_crop.putalpha(mask)
+            background.paste(thumb_crop, (center_x - hex_w//2, center_y - hex_h//2), thumb_crop)
+
+            # --- 3. Text Overlays ---
+            
+            # A. "STARTED PLAYING" (Top)
+            self.draw_text_with_shadow(
+                draw, 
+                (center_x, 80), 
+                "STARTED PLAYING", 
+                self.font_header
+            )
+
+            # B. Song Title (Below Hexagon)
+            title_text = song.title
+            # Wrap text if it's too long
+            wrapper = textwrap.TextWrapper(width=30)
+            word_list = wrapper.wrap(text=title_text)
+            wrapped_title = "\n".join(word_list)
+
+            # Position below the hexagon (approx center_y + half hex height + padding)
+            text_y_pos = center_y + (hex_h // 2) + 50
+            
+            self.draw_text_with_shadow(
+                draw,
+                (center_x, text_y_pos),
+                wrapped_title,
+                self.font_title
+            )
+
+            # C. Duration (Bottom)
+            # Calculate duration Y position based on title lines
+            line_count = len(word_list)
+            duration_y_pos = text_y_pos + (55 * line_count) + 20 
+            
             duration_text = f"Duration: {song.duration} Mins"
             
-            # If the title was multiline, we might need to push duration down, 
-            # but fixed positioning usually looks cleaner for thumbnails
-            draw.text((center_x, 670), duration_text, font=self.font_small, fill=self.fill, anchor="mm")
+            self.draw_text_with_shadow(
+                draw,
+                (center_x, duration_y_pos),
+                duration_text,
+                self.font_duration
+            )
 
             background.save(output)
             os.remove(temp)
