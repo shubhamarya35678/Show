@@ -146,7 +146,7 @@ class Inline:
                 [
                     self.ikb(
                         text=lang["source"],
-                        url="https://t.me/innocent_xd_babe",
+                        url="https://files.catbox.moe/o0e6tn.mp4",
                     )
                 ]
             ]
