@@ -104,7 +104,7 @@
     "queue_fetching": "Fetching queue...",
     "restarting": "Restarting...",
     "restarted": "Restart in progress. Don't worry, it'll only take a few seconds… maybe.",
-    "start_pm": "<b>───「 {1} 」───</b>\n\n<b>Hey {0} !</b>\n\n<b>A primium, powerful music bot with some awesome and useful features to light up your group vibes.\n\n<b><i>Click on the help section for more info.</i></b>",
+    "start_pm": "<b>───「 {1} 」───</b>\n\n<b>Hey {0} !</b>\n\n<b>A primium, powerful music bot with some awesome and useful features to light up your group vibes.\n\n<b><i>Click on the help button for more info.</i></b>",
     "start_gp": "<b>───「 {1} 」───</b>\n\n<b>Hey {0} !</b>\n\n<b>A primium, powerful music bot with some awesome and useful features to light up your group vibes.</i></b>",
     "start_settings": "<u><b>{0} settings</b></u>\n\nClick the buttons below to change this chat's current settings.",
     "stats_fetching": "Fetching stats...",
