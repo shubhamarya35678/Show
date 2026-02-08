@@ -135,7 +135,7 @@ class Inline:
                     url=f"https://t.me/{app.username}?startgroup=true",
                 )
             ],
-            [self.ikb(text=lang["help section"], callback_data="help section")],
+            [self.ikb(text=lang["help"], callback_data="help")],
             [
                 self.ikb(text=lang["support"], url=config.SUPPORT_CHAT),
                 self.ikb(text=lang["channel"], url=config.SUPPORT_CHANNEL),
