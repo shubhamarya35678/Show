@@ -1,8 +1,3 @@
-# Copyright (c) 2025 AnonymousX1025
-# Licensed under the MIT License.
-# This file is part of AnonXMusic
-
-
 import os
 import aiohttp
 import textwrap
@@ -16,18 +11,15 @@ from anony.helpers import Track
 class Thumbnail:
     def __init__(self):
         # Hexagon settings
-        self.hex_radius = 230  # Slightly larger to match the visual weight
+        self.hex_radius = 200  # Reduced radius
         self.fill = (255, 255, 255)
-        self.stroke_color = (255, 255, 255)
-        self.stroke_width = 7
+        self.stroke_color = (255, 255, 255) # White border
+        self.stroke_width = 10  # Thicker border for better visibility
 
         # Load Fonts
         # Ensure these font files exist in the specified path
-        # Title font (for Song Name)
         self.font_title = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 50)
-        # Header font (for STARTED PLAYING)
         self.font_header = ImageFont.truetype("anony/helpers/Raleway-Bold.ttf", 60)
-        # Duration font
         self.font_duration = ImageFont.truetype("anony/helpers/Inter-Light.ttf", 35)
 
     async def save_thumb(self, output_path: str, url: str) -> str:
@@ -78,16 +70,16 @@ class Thumbnail:
             # --- 1. Background Setup ---
             original = Image.open(temp).convert("RGBA")
             background = original.resize(size, Image.Resampling.LANCZOS)
-            
-            # Apply heavy blur and darken to match the reference style
-            background = background.filter(ImageFilter.GaussianBlur(30))
+
+            # Apply "Little" Blur (Reduced from 30 to 10)
+            background = background.filter(ImageFilter.GaussianBlur(10))
             enhancer = ImageEnhance.Brightness(background)
             background = enhancer.enhance(0.5)  # Darken background to 50%
 
             # --- 2. Central Hexagon Artwork ---
-            # Define hexagon box size
-            hex_w, hex_h = (480, 480)
-            
+            # Define hexagon box size - MADE SMALLER (Was 480, now 380)
+            hex_w, hex_h = (380, 380)
+
             # Center coordinates
             center_x = size[0] // 2
             # Shift center_y slightly up to make room for bottom text
@@ -95,28 +87,35 @@ class Thumbnail:
 
             # Crop original to fill hexagon box
             thumb_crop = ImageOps.fit(original, (hex_w, hex_h), method=Image.LANCZOS, centering=(0.5, 0.5))
-            
+
             # Create mask
             mask, hex_points = self.create_hexagon_mask((hex_w, hex_h))
 
-            # Draw the Hexagon Border on the Background
+            # Apply mask to crop
+            thumb_crop.putalpha(mask)
+
+            # Calculate Paste Coordinates
+            paste_x = center_x - hex_w//2
+            paste_y = center_y - hex_h//2
+
+            # Paste the image onto the background
+            background.paste(thumb_crop, (paste_x, paste_y), thumb_crop)
+
+            # --- Draw Border AFTER Pasting ---
+            # This ensures the white border is visible on top of the image
             draw = ImageDraw.Draw(background)
-            
+
             # Offset points to the center of the canvas
             final_hex_points = [
-                (x + center_x - hex_w//2, y + center_y - hex_h//2) 
+                (x + paste_x, y + paste_y) 
                 for x, y in hex_points
             ]
-            
-            # Draw border (Stroke)
+
+            # Draw white border around the shape
             draw.polygon(final_hex_points, outline=self.stroke_color, width=self.stroke_width)
 
-            # Apply mask to crop and paste
-            thumb_crop.putalpha(mask)
-            background.paste(thumb_crop, (center_x - hex_w//2, center_y - hex_h//2), thumb_crop)
-
             # --- 3. Text Overlays ---
-            
+
             # A. "STARTED PLAYING" (Top)
             self.draw_text_with_shadow(
                 draw, 
@@ -134,7 +133,7 @@ class Thumbnail:
 
             # Position below the hexagon (approx center_y + half hex height + padding)
             text_y_pos = center_y + (hex_h // 2) + 50
-            
+
             self.draw_text_with_shadow(
                 draw,
                 (center_x, text_y_pos),
@@ -146,9 +145,9 @@ class Thumbnail:
             # Calculate duration Y position based on title lines
             line_count = len(word_list)
             duration_y_pos = text_y_pos + (55 * line_count) + 20 
-            
+
             duration_text = f"Duration: {song.duration} Mins"
-            
+
             self.draw_text_with_shadow(
                 draw,
                 (center_x, duration_y_pos),
